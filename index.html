@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 時代的家電訂閱戰略</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React & ReactDOM (使用 cdnjs 並移除 crossorigin，確保本地雙擊或 GitHub Pages 都能運行) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  
+  <!-- Babel 讓瀏覽器可以直接編譯 JSX -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
+
+  <style>
+    /* 隱藏滾動條但保留滾動功能 */
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    /* 增加基礎 FadeIn 動畫對應 Tailwind 自訂 */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans">
+  <div id="root">
+    <!-- 載入中畫面，防止白畫面 -->
+    <div class="flex flex-col items-center justify-center min-h-screen text-slate-500">
+      <svg class="animate-spin h-10 w-10 mb-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <p class="text-lg font-semibold">系統載入中 (Loading...)，請稍候...</p>
+    </div>
+  </div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    // --- Lucide Icons (Inline SVG 轉換以適應獨立 HTML 檔案) ---
+    const IconWrapper = ({ children, size = 24, className = '' }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        {children}
+      </svg>
+    );
+    const Shield = (props) => <IconWrapper {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></IconWrapper>;
+    const Zap = (props) => <IconWrapper {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></IconWrapper>;
+    const TrendingUp = (props) => <IconWrapper {...props}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></IconWrapper>;
+    const AlertTriangle = (props) => <IconWrapper {...props}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></IconWrapper>;
+    const BarChart3 = (props) => <IconWrapper {...props}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></IconWrapper>;
+    const Target = (props) => <IconWrapper {...props}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></IconWrapper>;
+    const BookOpen = (props) => <IconWrapper {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconWrapper>;
+    const LayoutDashboard = (props) => <IconWrapper {...props}><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></IconWrapper>;
+    const Globe = (props) => <IconWrapper {...props}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></IconWrapper>;
+
+    // --- 翻譯與文案 ---
+    const translations = {
+      ko: {
+        header: {
+          badge: "[1주차 과제]",
+          title1: "AI 시대의 가전 구독 전략:",
+          title2: "방어형 선도기업 vs 전환기 도전자",
+          title3: " 간의 Market-Driving 분석",
+          subtitle: "연구 대상: 코웨이(Coway) vs SK매직(SK Magic) | 핵심 키워드: O2O, 초개인화(Hyper-personalization), 선택과 집중"
+        },
+        tabs: {
+          summary: "핵심 요약", swot: "SWOT 분석", competency: "핵심 역량", strategy: "전략 심층 분석", references: "참고문헌"
+        },
+        summary: {
+          title: "핵심 요약 (Executive Summary / BLUF)",
+          p1: "본 보고서는 한국 AI 가전 구독 시장의 양대 산맥인 코웨이(시장 1위)와 SK매직(도전자)을 비교 분석합니다. 코웨이는 1.3만 명 규모의 실물 서비스망(O2O)을 바탕으로 '방어벽'을 구축하고 AI 예측 유지보수로 제품 리더십을 공고히 하고 있습니다. 반면 SK매직은 전통 주방가전 사업을 매각하는 교과서적인 '선택과 집중' 전략을 취하며, SK그룹 생태계와 결합하여 AI 플랫폼 기업으로의 전면 전환을 꾀하고 있습니다.",
+          conclusion_pre: "결론적으로 양사 모두 단순 하드웨어 판매(Market-Driven)에서 벗어나, ",
+          conclusion_hl: "데이터 기반의 고객 생애 가치(LTV) 창출",
+          conclusion_post: "이라는 Market-Driving 전략으로 진화하고 있음을 시사합니다.",
+          coway_title: "Coway (코웨이)",
+          coway_desc: "방어형 선도기업. 압도적인 O2O 실물 인프라와 AI 데이터 폐쇄 루프(Closed-loop)를 통한 절대적 시장 방어전략.",
+          sk_title: "SK Magic (SK매직)",
+          sk_desc: "민첩한 도전자. 그룹 생태계 시너지와 과감한 사업 재편(선택과 집중)을 통한 AI 헬스케어 플랫폼으로의 도약."
+        },
+        swot: {
+          coway_title: "코웨이 방어 전략",
+          sk_title: "SK매직 공격 전략",
+          s: "강점 (Strengths)",
+          w: "약점 (Weaknesses)",
+          o: "기회 (Opportunities)",
+          t: "위협 (Threats)",
+          data: {
+            coway: {
+              s: ['한국 최대 오프라인 방문관리 인력(코디, 약 1.3만 명) 보유로 강력한 O2O 해자 구축', '국내외 누적 1,000만 렌탈 계정 확보로 절대적 규모의 경제 달성', 'IoCare 시스템 기반의 예측성 유지보수(Predictive Maintenance) 구현'],
+              w: ['방대한 실물 인프라(코디) 유지에 따른 막대한 인건비 및 고정비 부담', '전통적인 정수기 시장의 높은 보급률로 인한 신규 고객 확보 비용 증가'],
+              o: ['BEREX 브랜드 론칭(2023)을 통한 고단가 수면공학 및 안마의자 시장 진출', 'AI 센서를 활용한 수면 데이터 수집 및 초개인화(Hyper-personalization) 서비스 창출'],
+              t: ['삼성, LG전자 등 대형 가전 기업들의 스마트홈 생태계를 앞세운 구독 시장 진출', '하드웨어 혁신 정체 시 AI 기술 주도권 상실 위험']
+            },
+            sk: {
+              s: ['SK네트웍스 및 SK텔레콤의 방대한 통신 데이터 및 AI 기술(A.) 무결점 통합 가능', '전통 가전의 제약이 적어 신속한 의사결정 및 신규 니치 마켓 진입 용이'],
+              w: ['코웨이 대비 절대적으로 부족한 오프라인 방문 인력(MC) 규모', '오프라인 네트워크 한계로 인한 고객 락인(Lock-in) 효과 상대적 열위', '경쟁사 대비 낮은 브랜드 프리미엄 및 가격 결정력'],
+              o: ['‘Magic 3.0’ 전략 하에 전통 가전 매각으로 AI 전환을 위한 투자 자금 확보', '레드오션을 탈피하고 AI 펫테크 및 시니어 헬스케어 시장 집중 타겟팅'],
+              t: ['캐시카우(전통 주방가전) 매각으로 인한 단기적 매출 공백 발생', '신규 AI 플랫폼 사업의 조기 수익화 실패 시 재무 건전성 악화 우려']
+            }
+          }
+        },
+        comp: {
+          title: "핵심 역량 비교 (Core Competency Assessment)",
+          desc: "각 기업의 전략적 차이를 명확히 보여주는 4가지 핵심 역량 지표입니다. 방어적 규모의 경제(Coway)와 공격적 민첩성(SK Magic)의 본질적 차이를 나타냅니다. (1~5점 척도)",
+          metrics: [
+            { label: 'O2O 실물 서비스 역량', desc: '코웨이의 압도적인 물리적 인프라 우위' },
+            { label: 'AI 데이터 통합 역량', desc: 'SK그룹 통신/AI 인프라 시너지 효과' },
+            { label: '시장 규모 및 가격 결정력', desc: '코웨이의 압도적인 렌탈 계정 및 매출 규모' },
+            { label: '전략적 전환 민첩성', desc: '레거시 사업 매각 등 SK매직의 파괴적 혁신성' }
+          ]
+        },
+        strat: {
+          sk_title: "SK매직: '도유소불유(途有所不由)' - 과감한 선택과 집중",
+          sk_sub: "손자병법의 전략적 포기 및 Market-Driving 포지셔닝",
+          act: "전략 행위:",
+          sk_act_desc: "2024년 초, SK매직은 안정적인 수익을 창출하던 가스레인지, 전기오븐 등 전통 주방가전 사업을 370억 원에 경동나비엔에 과감히 매각했습니다.",
+          theo: "이론적 함의:",
+          sk_theo_desc1: "이는 손자병법 구지편의 '도유소불유, 군유소불격(지나지 않아야 할 길이 있고, 치지 않아야 할 적군이 있다)'의 완벽한 실천입니다. 단순한 수익을 넘어 ",
+          sk_theo_hl: "\"고가치의 고객 데이터를 지속 창출할 수 있는가?\"",
+          sk_theo_desc2: "라는 질문에 부합하지 않는 레드오션 사업을 버린 것입니다. 확보된 자금을 AI 플랫폼 및 파텍/시니어 헬스케어 기반의 구독 경제(STP 재포지셔닝)에 쏟아붓는 전략은, 후발 기업이 판을 흔드는 전형적인 Market-Driving 전술입니다.",
+          coway_title: "코웨이: '솔연(率然)'의 방어전 - AI 기반 O2O 데이터 폐쇄 루프",
+          coway_sub: "예측성 유지보수(Predictive Maintenance)와 생애 가치 극대화",
+          coway_act_desc: "스마트 진단 시스템(IoCare)의 전면 고도화, 그리고 수면 과학 및 안마의자를 포괄하는 신규 브랜드 'BEREX(비렉스)' 론칭.",
+          coway_theo_desc1: "1위 기업 코웨이의 전략은 상산의 뱀 '솔연(머리를 치면 꼬리가 달려들고, 꼬리를 치면 머리가 달려드는 완벽한 방어 태세)'과 같습니다. 단말기의 AI 센서가 필터 수명이나 기기 이상을 미리 예측하면(머리), 전국망을 갖춘 코디(Cody)가 즉각 출동하여 선제적 조치를 취합니다(꼬리). 이러한 ",
+          coway_theo_hl: "소프트웨어(AI) + 하드웨어 + 실물 서비스(O2O)의 삼위일체 결합",
+          coway_theo_desc2: "은 경쟁사가 단기간에 복제할 수 없는 '지속 가능한 경쟁 우위(Sustainable Competitive Advantage)'를 창출합니다. 또한 BEREX 브랜드를 통해 데이터 수집의 범위를 기기에서 인간(수면 데이터)으로 확장하며 초개인화(Hyper-personalization) 락인을 강화하고 있습니다."
+        },
+        ref: {
+          title: "참고 문헌 (References)",
+          desc: "※ 본 보고서는 학술 논문 인용 양식(APA 형식 기반)을 준수하여 작성되었습니다.",
+          c1: "2023년도 사업보고서 및 감사보고서", c1_s: "금융감독원 전자공시시스템(DART)",
+          c2: "2023년도 사업보고서", c2_s: "금융감독원 전자공시시스템(DART)",
+          c3: "SK매직, 가스레인지·오븐 사업 370억에 경동나비엔에 매각 완료", c3_s: "한국경제 (Korea Economic Daily)",
+          c4: "코웨이, ‘비렉스(BEREX)’ 론칭… 수면 및 힐링케어 신사업 전면 진출", c4_s: "파이낸셜뉴스 (Financial News)",
+          c5_a: "강의 교재 참조", c5_t: "AI 시대의 마케팅 전략: Market-Driving, O2O 통합 및 초개인화 이론", c5_s: "해당 학기 수업 계획서 (Syllabus) 1주차~13주차"
+        }
+      },
+      zh: {
+        header: {
+          badge: "[第一週作業]",
+          title1: "AI 時代的家電訂閱戰略：",
+          title2: "防禦型霸主 vs 轉型中挑戰者",
+          title3: " 間的 Market-Driving 分析",
+          subtitle: "研究對象：Coway vs SK Magic | 核心關鍵字：O2O, 超個人化, 選擇與集中"
+        },
+        tabs: {
+          summary: "核心摘要", swot: "SWOT 分析", competency: "核心能力", strategy: "戰略深度解析", references: "參考文獻"
+        },
+        summary: {
+          title: "核心摘要 (Executive Summary / BLUF)",
+          p1: "本報告針對韓國 AI 家電訂閱市場的兩大巨頭——Coway（市佔第一）與 SK Magic（挑戰者）進行對比分析。Coway 憑藉 1.3 萬名規模的實體服務網（O2O）建立「防禦壁壘」，並以 AI 預測維護鞏固產品領導力。反觀 SK Magic 則採取教科書級別的「選擇與集中」戰略，出售傳統廚電業務，結合 SK 集團生態系全力轉型為 AI 平台企業。",
+          conclusion_pre: "結論而言，雙方皆已擺脫單純的硬體販售（Market-Driven），朝向",
+          conclusion_hl: "「以數據驅動顧客終身價值（LTV）創造」",
+          conclusion_post: "的 Market-Driving 戰略演進。",
+          coway_title: "Coway",
+          coway_desc: "防禦型霸主。透過壓倒性的 O2O 實體基礎設施與 AI 數據閉環（Closed-loop）實現絕對的市場防禦戰略。",
+          sk_title: "SK Magic",
+          sk_desc: "敏捷型挑戰者。透過集團生態系協同效應與果斷的業務重組（選擇與集中），躍升為 AI 健康照護平台。"
+        },
+        swot: {
+          coway_title: "Coway 防禦戰略",
+          sk_title: "SK Magic 攻擊戰略",
+          s: "優勢 (Strengths)",
+          w: "劣勢 (Weaknesses)",
+          o: "機會 (Opportunities)",
+          t: "威脅 (Threats)",
+          data: {
+            coway: {
+              s: ['擁有韓國最大實體到府保養團隊（Cody，約 1.3 萬人），建構極高的 O2O 護城河', '國內外累計突破 1,000 萬訂閱帳戶，具備絕對規模經濟', '透過 IoCare 系統實現預測性維護（Predictive Maintenance）'],
+              w: ['維持龐大實體 Cody 團隊帶來極高的人事與固定成本', '傳統淨水器市場滲透率已近飽和，獲客成本上升'],
+              o: ['推出 BEREX 品牌（2023）進軍高單價睡眠科技與按摩椅市場', '利用 AI 感測器收集睡眠數據，創造超個人化服務'],
+              t: ['三星、LG 等大型家電企業挾帶智慧家庭生態系入局', '若硬體創新停滯，可能喪失 AI 技術主導權']
+            },
+            sk: {
+              s: ['背靠 SK 集團，能無縫整合 SK Telecom 龐大通訊數據與 AI 技術', '無傳統硬體包袱，決策敏捷，易於切入利基市場'],
+              w: ['線下服務人員（MC）規模遠小於 Coway', '實體網路限制導致顧客鎖定（Lock-in）效應較弱', '品牌溢價與定價能力較競爭對手低'],
+              o: ['透過「Magic 3.0」戰略出售傳統家電，獲取 AI 轉型資金', '避開紅海，精準鎖定 AI 寵物科技與銀髮族健康照護市場'],
+              t: ['割捨傳統廚電（搖錢樹）帶來短期營收空窗期', '若 AI 新事業無法迅速變現，將面臨財務惡化風險']
+            }
+          }
+        },
+        comp: {
+          title: "核心能力比較 (Core Competency Assessment)",
+          desc: "以下 4 項核心能力指標明確展現了雙方的戰略差異。體現出防禦型規模經濟（Coway）與攻擊型敏捷性（SK Magic）的本質區別。（1~5分制）",
+          metrics: [
+            { label: 'O2O 實體服務能力', desc: 'Coway 壓倒性的物理基礎設施優勢' },
+            { label: 'AI 數據整合能力', desc: 'SK 集團通訊與 AI 基礎設施的協同效應' },
+            { label: '市場規模與定價權', desc: 'Coway 龐大的訂閱帳戶與營收規模' },
+            { label: '戰略轉型敏捷度', desc: 'SK Magic 割捨舊業務的破壞式創新能力' }
+          ]
+        },
+        strat: {
+          sk_title: "SK Magic：「途有所不由」- 果斷的選擇與集中",
+          sk_sub: "孫子兵法的戰略捨棄與 Market-Driving 定位",
+          act: "戰略行為：",
+          sk_act_desc: "2024 年初，SK Magic 將穩定獲利的瓦斯爐、烤箱等傳統廚房家電業務，以 370 億韓元大膽出售給慶東納碧安。",
+          theo: "理論意涵：",
+          sk_theo_desc1: "此舉完美實踐了《孫子兵法》的「途有所不由，軍有所不擊」。超越單純的營收考量，SK Magic 拋棄了無法回答 ",
+          sk_theo_hl: "「能否持續創造高價值顧客數據？」",
+          sk_theo_desc2: " 這一核心問題的紅海事業。將資金重倉投入 AI 平台與寵物/銀髮照護訂閱，是後發企業撼動市場的典型 Market-Driving 戰術。",
+          coway_title: "Coway：「率然」的防禦戰 - AI 賦能的 O2O 數據閉環",
+          coway_sub: "預測性維護（Predictive Maintenance）與終身價值最大化",
+          coway_act_desc: "全面升級 IoCare 智慧診斷系統，並創立涵蓋睡眠科學與按摩椅的新品牌「BEREX」。",
+          coway_theo_desc1: "市佔第一的 Coway 採取了如同常山之蛇「率然」（擊其首則尾至）的防禦姿態。當 AI 預測到設備異常（首），龐大的實體 Cody 團隊便立刻出動（尾）。這種 ",
+          coway_theo_hl: "軟體(AI) + 硬體 + 實體服務(O2O) 的三位一體",
+          coway_theo_desc2: "，創造了競爭對手難以複製的「持續競爭優勢」。此外，BEREX 將數據收集延伸至人類睡眠，進一步強化了超個人化鎖定效應。"
+        },
+        ref: {
+          title: "參考文獻 (References)",
+          desc: "※ 本報告遵循學術論文引用格式（基於 APA 格式）編寫。",
+          c1: "2023年度事業報告書與審計報告", c1_s: "韓國金融監督院電子公示系統 (DART)",
+          c2: "2023年度事業報告書", c2_s: "韓國金融監督院電子公示系統 (DART)",
+          c3: "SK Magic，瓦斯爐·烤箱事業以370億售予慶東納碧安", c3_s: "韓國經濟 (Korea Economic Daily)",
+          c4: "Coway 推出「BEREX」… 全面進軍睡眠與療癒照護新事業", c4_s: "Financial News",
+          c5_a: "課程教材參考", c5_t: "AI 時代的行銷戰略：Market-Driving, O2O 整合及超個人化理論", c5_s: "該學期課程計畫書 (Syllabus) 第1~13週"
+        }
+      },
+      en: {
+        header: {
+          badge: "[Week 1 Assignment]",
+          title1: "Home Appliance Subscription Strategy in the AI Era:",
+          title2: "Defensive Leader vs. Transitioning Challenger",
+          title3: " Market-Driving Analysis",
+          subtitle: "Subject: Coway vs SK Magic | Core Keywords: O2O, Hyper-personalization, Selection and Concentration"
+        },
+        tabs: {
+          summary: "Executive Summary", swot: "SWOT Analysis", competency: "Core Competencies", strategy: "Strategic Analysis", references: "References"
+        },
+        summary: {
+          title: "Executive Summary (BLUF)",
+          p1: "This report provides a comparative analysis of the two giants in the Korean AI home appliance subscription market: Coway (market leader) and SK Magic (challenger). Coway has built a 'defensive wall' leveraging its 13,000-strong physical service network (O2O) and solidifies its product leadership with AI predictive maintenance. Conversely, SK Magic is executing a textbook 'selection and concentration' strategy by selling off traditional kitchen appliance units to fully pivot into an AI platform company via the SK Group ecosystem.",
+          conclusion_pre: "In conclusion, both companies are evolving from simple hardware sales (Market-Driven) to a Market-Driving strategy focused on ",
+          conclusion_hl: "creating data-driven Customer Lifetime Value (LTV)",
+          conclusion_post: ".",
+          coway_title: "Coway",
+          coway_desc: "Defensive Leader. Absolute market defense strategy through overwhelming O2O physical infrastructure and an AI data closed-loop.",
+          sk_title: "SK Magic",
+          sk_desc: "Agile Challenger. Leaping into an AI healthcare platform through group ecosystem synergy and drastic business restructuring."
+        },
+        swot: {
+          coway_title: "Coway Defense Strategy",
+          sk_title: "SK Magic Attack Strategy",
+          s: "Strengths",
+          w: "Weaknesses",
+          o: "Opportunities",
+          t: "Threats",
+          data: {
+            coway: {
+              s: ['Formidable O2O moat with Korea\'s largest offline service workforce (~13,000 Cody members)', 'Absolute economies of scale with over 10 million cumulative subscription accounts globally', 'Implementation of Predictive Maintenance based on the IoCare system'],
+              w: ['Massive labor and fixed costs associated with maintaining the physical Cody infrastructure', 'Increasing customer acquisition costs due to high saturation in the traditional water purifier market'],
+              o: ['Entering the high-ticket sleep tech and massage chair market via the BEREX brand (2023)', 'Creating hyper-personalized services by collecting sleep data via AI sensors'],
+              t: ['Subscription market entry by major home appliance giants (Samsung, LG) leveraging smart home ecosystems', 'Risk of losing AI technology leadership if hardware innovation stagnates']
+            },
+            sk: {
+              s: ['Seamless integration of SK Telecom\'s vast communication data and AI technology (A.)', 'Agile decision-making and easy entry into new niche markets due to fewer legacy hardware constraints'],
+              w: ['Offline service personnel (MC) scale is absolutely smaller compared to Coway', 'Relatively weaker customer lock-in effect due to offline network limitations', 'Lower brand premium and pricing power compared to competitors'],
+              o: ['Securing investment funds for AI transition by selling traditional appliances under the "Magic 3.0" strategy', 'Targeting AI pet-tech and senior healthcare markets to escape red oceans'],
+              t: ['Short-term revenue gap due to the sale of cash cow (traditional kitchen appliances) businesses', 'Risk of financial deterioration if new AI platform businesses fail to monetize early']
+            }
+          }
+        },
+        comp: {
+          title: "Core Competency Assessment",
+          desc: "These 4 core competency metrics clearly demonstrate the strategic differences between the companies, highlighting the fundamental distinction between defensive economies of scale (Coway) and aggressive agility (SK Magic). (Scale: 1-5)",
+          metrics: [
+            { label: 'O2O Physical Service Capability', desc: 'Coway\'s overwhelming physical infrastructure advantage' },
+            { label: 'AI Data Integration Capability', desc: 'Synergy effect from SK Group\'s telecom/AI infrastructure' },
+            { label: 'Market Scale & Pricing Power', desc: 'Coway\'s massive subscription account base and revenue' },
+            { label: 'Strategic Pivot Agility', desc: 'SK Magic\'s disruptive innovation, including legacy business sales' }
+          ]
+        },
+        strat: {
+          sk_title: "SK Magic: 'Selection and Concentration'",
+          sk_sub: "Sun Tzu's Strategic Abandonment & Market-Driving Positioning",
+          act: "Strategic Action:",
+          sk_act_desc: "In early 2024, SK Magic boldly sold its steadily profitable traditional kitchen appliance businesses (gas stoves, electric ovens) to Kyungdong Navien for 37 billion KRW.",
+          theo: "Theoretical Implication:",
+          sk_theo_desc1: "This perfectly executes Sun Tzu's principle of 'There are some roads not to follow, some troops not to strike.' Beyond simple revenue, SK Magic abandoned red ocean businesses that failed to answer the core question: ",
+          sk_theo_hl: "\"Can this continuously generate high-value customer data?\"",
+          sk_theo_desc2: " Pouring secured funds into an AI platform and pet/senior healthcare subscription economy is a typical Market-Driving tactic used by latecomers to shake up the market.",
+          coway_title: "Coway: 'Shuairan' Defense - AI-Powered O2O Data Closed-Loop",
+          coway_sub: "Predictive Maintenance & Maximizing Lifetime Value",
+          coway_act_desc: "Comprehensive upgrade of the smart diagnostic system (IoCare) and launch of 'BEREX', a new brand encompassing sleep science and massage chairs.",
+          coway_theo_desc1: "Market leader Coway's strategy resembles 'Shuairan', the mythical snake of Mt. Changshan (strike its head, and its tail attacks). When AI predicts device anomalies (head), the nationwide Cody network immediately dispatches (tail). This ",
+          coway_theo_hl: "trinity of Software (AI) + Hardware + Physical Service (O2O)",
+          coway_theo_desc2: " creates a 'Sustainable Competitive Advantage' that rivals cannot quickly replicate. Furthermore, extending data collection to human sleep via BEREX strengthens the hyper-personalization lock-in."
+        },
+        ref: {
+          title: "References",
+          desc: "※ This report is formatted following academic citation standards (based on APA format).",
+          c1: "2023 Business and Audit Report", c1_s: "Financial Supervisory Service (DART)",
+          c2: "2023 Business Report", c2_s: "Financial Supervisory Service (DART)",
+          c3: "SK Magic completes sale of gas stove/oven business to Kyungdong Navien for 37B KRW", c3_s: "Korea Economic Daily",
+          c4: "Coway launches 'BEREX'... Full entry into sleep and healing care business", c4_s: "Financial News",
+          c5_a: "Course Material", c5_t: "Marketing Strategy in the AI Era: Market-Driving, O2O Integration, and Hyper-personalization Theory", c5_s: "Course Syllabus Weeks 1-13"
+        }
+      }
+    };
+
+    // --- 元件 (Components) ---
+    function SummaryView({ t }) {
+      return (
+        <div className="space-y-8 animate-[fadeIn_0.5s_ease-out]">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+            <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <LayoutDashboard className="text-blue-600" />
+              {t.summary.title}
+            </h2>
+            <p className="text-lg leading-relaxed text-slate-600 mb-6">
+              {t.summary.p1}
+            </p>
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+              <p className="font-medium text-slate-700">
+                {t.summary.conclusion_pre}<span className="bg-yellow-100 px-1 py-0.5 rounded text-yellow-800 font-bold">{t.summary.conclusion_hl}</span>{t.summary.conclusion_post}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-6 text-white shadow-md transform transition hover:-translate-y-1">
+              <h3 className="text-xl font-bold mb-2">{t.summary.coway_title}</h3>
+              <p className="opacity-90">{t.summary.coway_desc}</p>
+            </div>
+            <div className="bg-gradient-to-br from-red-500 to-red-700 rounded-2xl p-6 text-white shadow-md transform transition hover:-translate-y-1">
+              <h3 className="text-xl font-bold mb-2">{t.summary.sk_title}</h3>
+              <p className="opacity-90">{t.summary.sk_desc}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function SwotView({ t }) {
+      const swotData = t.swot.data;
+
+      const Card = ({ title, items, icon: Icon, typeColor }) => (
+        <div className={`p-5 rounded-xl border bg-white shadow-sm hover:shadow-md transition-shadow border-t-4 ${typeColor}`}>
+          <h4 className="font-bold flex items-center gap-2 mb-3 text-slate-800">
+            <Icon size={18} /> {title}
+          </h4>
+          <ul className="space-y-2">
+            {items.map((item, idx) => (
+              <li key={idx} className="text-sm text-slate-600 flex items-start gap-2">
+                <span className="mt-1 min-w-[6px] h-[6px] rounded-full bg-slate-300"></span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+
+      return (
+        <div className="space-y-8 animate-[fadeIn_0.5s_ease-out]">
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Coway SWOT */}
+            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+              <h3 className="text-2xl font-bold text-blue-700 mb-6 flex items-center gap-2">
+                <Shield className="text-blue-600" /> {t.swot.coway_title}
+              </h3>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Card title={t.swot.s} items={swotData.coway.s} icon={Zap} typeColor="border-blue-500" />
+                <Card title={t.swot.w} items={swotData.coway.w} icon={AlertTriangle} typeColor="border-slate-400" />
+                <Card title={t.swot.o} items={swotData.coway.o} icon={TrendingUp} typeColor="border-green-500" />
+                <Card title={t.swot.t} items={swotData.coway.t} icon={AlertTriangle} typeColor="border-red-500" />
+              </div>
+            </div>
+
+            {/* SK Magic SWOT */}
+            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+              <h3 className="text-2xl font-bold text-red-600 mb-6 flex items-center gap-2">
+                <Target className="text-red-500" /> {t.swot.sk_title}
+              </h3>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Card title={t.swot.s} items={swotData.sk.s} icon={Zap} typeColor="border-red-500" />
+                <Card title={t.swot.w} items={swotData.sk.w} icon={AlertTriangle} typeColor="border-slate-400" />
+                <Card title={t.swot.o} items={swotData.sk.o} icon={TrendingUp} typeColor="border-green-500" />
+                <Card title={t.swot.t} items={swotData.sk.t} icon={AlertTriangle} typeColor="border-orange-500" />
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function CompetencyView({ t }) {
+      const metrics = [
+        { label: t.comp.metrics[0].label, coway: 5, sk: 3, desc: t.comp.metrics[0].desc },
+        { label: t.comp.metrics[1].label, coway: 4, sk: 4.5, desc: t.comp.metrics[1].desc },
+        { label: t.comp.metrics[2].label, coway: 5, sk: 3.5, desc: t.comp.metrics[2].desc },
+        { label: t.comp.metrics[3].label, coway: 3.5, sk: 5, desc: t.comp.metrics[3].desc },
+      ];
+
+      return (
+        <div className="space-y-8 animate-[fadeIn_0.5s_ease-out]">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+            <h2 className="text-2xl font-bold text-slate-800 mb-6">{t.comp.title}</h2>
+            <p className="text-slate-600 mb-8">
+              {t.comp.desc}
+            </p>
+
+            <div className="space-y-8">
+              {metrics.map((m, idx) => (
+                <div key={idx} className="space-y-2">
+                  <div className="flex justify-between items-end">
+                    <span className="font-bold text-slate-700">{m.label}</span>
+                    <span className="text-xs text-slate-500">{m.desc}</span>
+                  </div>
+                  
+                  <div className="relative pt-1">
+                    {/* Coway Bar */}
+                    <div className="flex items-center mb-2">
+                      <div className="w-24 text-sm text-blue-700 font-semibold">Coway</div>
+                      <div className="flex-1 bg-slate-100 rounded-full h-4 overflow-hidden">
+                        <div 
+                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-4 rounded-full transition-all duration-1000 ease-out"
+                          style={{ width: `${(m.coway / 5) * 100}%` }}
+                        ></div>
+                      </div>
+                      <div className="w-8 text-right text-sm font-bold text-slate-600">{m.coway}</div>
+                    </div>
+                    
+                    {/* SK Bar */}
+                    <div className="flex items-center">
+                      <div className="w-24 text-sm text-red-600 font-semibold">SK Magic</div>
+                      <div className="flex-1 bg-slate-100 rounded-full h-4 overflow-hidden">
+                        <div 
+                          className="bg-gradient-to-r from-red-400 to-red-500 h-4 rounded-full transition-all duration-1000 ease-out delay-300"
+                          style={{ width: `${(m.sk / 5) * 100}%` }}
+                        ></div>
+                      </div>
+                      <div className="w-8 text-right text-sm font-bold text-slate-600">{m.sk}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function StrategyView({ t }) {
+      return (
+        <div className="space-y-6 animate-[fadeIn_0.5s_ease-out]">
+          {/* Strategy 1: SK Magic */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 border-l-8 border-l-red-500">
+            <h3 className="text-2xl font-bold text-slate-800 mb-2">
+              {t.strat.sk_title}
+            </h3>
+            <p className="text-red-600 font-medium mb-4 flex items-center gap-2">
+              <Target size={18}/> {t.strat.sk_sub}
+            </p>
+            <div className="space-y-4 text-slate-600">
+              <p>
+                <strong>{t.strat.act}</strong> {t.strat.sk_act_desc}
+              </p>
+              <p>
+                <strong>{t.strat.theo}</strong> {t.strat.sk_theo_desc1}
+                <span className="text-blue-600 font-semibold">{t.strat.sk_theo_hl}</span>
+                {t.strat.sk_theo_desc2}
+              </p>
+            </div>
+          </div>
+
+          {/* Strategy 2: Coway */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 border-l-8 border-l-blue-600">
+            <h3 className="text-2xl font-bold text-slate-800 mb-2">
+              {t.strat.coway_title}
+            </h3>
+            <p className="text-blue-700 font-medium mb-4 flex items-center gap-2">
+              <Shield size={18}/> {t.strat.coway_sub}
+            </p>
+            <div className="space-y-4 text-slate-600">
+              <p>
+                <strong>{t.strat.act}</strong> {t.strat.coway_act_desc}
+              </p>
+              <p>
+                <strong>{t.strat.theo}</strong> {t.strat.coway_theo_desc1}
+                <span className="text-red-500 font-semibold">{t.strat.coway_theo_hl}</span>
+                {t.strat.coway_theo_desc2}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ReferencesView({ t }) {
+      const citations = [
+        { author: 'Coway', year: '2024', title: t.ref.c1, source: t.ref.c1_s, link: '#' },
+        { author: 'SK Networks', year: '2024', title: t.ref.c2, source: t.ref.c2_s, link: '#' },
+        { author: '신아름', year: '2024, January 4', title: t.ref.c3, source: t.ref.c3_s, link: '#' },
+        { author: '정상희', year: '2023, December 28', title: t.ref.c4, source: t.ref.c4_s, link: '#' },
+        { author: t.ref.c5_a, year: '2024', title: t.ref.c5_t, source: t.ref.c5_s, link: '#' }
+      ];
+
+      return (
+        <div className="animate-[fadeIn_0.5s_ease-out] bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+          <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+            <BookOpen className="text-slate-600" /> {t.ref.title}
+          </h2>
+          <p className="text-slate-500 mb-6 text-sm">{t.ref.desc}</p>
+          
+          <div className="space-y-4 pl-4 border-l-4 border-slate-200">
+            {citations.map((cite, idx) => (
+              <div key={idx} className="text-slate-700 hover:text-slate-900 transition-colors">
+                <span className="font-semibold">{cite.author}.</span> ({cite.year}). 
+                <span className="italic mx-1">{cite.title}.</span> 
+                <span>{cite.source}.</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // --- 主應用程式 App ---
+    function App() {
+      const [activeTab, setActiveTab] = useState('summary');
+      const [lang, setLang] = useState('ko');
+
+      const t = translations[lang];
+
+      const tabs = [
+        { id: 'summary', label: t.tabs.summary, icon: LayoutDashboard },
+        { id: 'swot', label: t.tabs.swot, icon: Target },
+        { id: 'competency', label: t.tabs.competency, icon: BarChart3 },
+        { id: 'strategy', label: t.tabs.strategy, icon: Zap },
+        { id: 'references', label: t.tabs.references, icon: BookOpen },
+      ];
+
+      return (
+        <div className="min-h-screen">
+          {/* Header */}
+          <header className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-8 shadow-lg relative">
+            <div className="absolute top-6 right-6 flex items-center gap-2 bg-slate-800/50 p-1.5 rounded-lg border border-slate-600 backdrop-blur-sm z-20">
+              <Globe size={16} className="text-slate-400 ml-1" />
+              <button onClick={() => setLang('ko')} className={`px-2 py-1 text-sm rounded transition-colors ${lang === 'ko' ? 'bg-blue-600 text-white font-bold' : 'text-slate-300 hover:text-white'}`}>한국어</button>
+              <button onClick={() => setLang('zh')} className={`px-2 py-1 text-sm rounded transition-colors ${lang === 'zh' ? 'bg-blue-600 text-white font-bold' : 'text-slate-300 hover:text-white'}`}>中文</button>
+              <button onClick={() => setLang('en')} className={`px-2 py-1 text-sm rounded transition-colors ${lang === 'en' ? 'bg-blue-600 text-white font-bold' : 'text-slate-300 hover:text-white'}`}>EN</button>
+            </div>
+            <div className="max-w-6xl mx-auto mt-8 md:mt-0">
+              <p className="text-blue-300 font-semibold mb-2 tracking-wide">{t.header.badge}</p>
+              <h1 className="text-3xl md:text-4xl font-bold mb-4 leading-tight">
+                {t.header.title1}<br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-red-400">{t.header.title2}</span>{t.header.title3}
+              </h1>
+              <p className="text-slate-300 flex items-center gap-2">
+                {t.header.subtitle}
+              </p>
+            </div>
+          </header>
+
+          {/* Navigation */}
+          <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+            <div className="max-w-6xl mx-auto px-4 flex overflow-x-auto hide-scrollbar">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-colors whitespace-nowrap border-b-2 ${
+                      activeTab === tab.id
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Icon size={18} />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Main Content Area */}
+          <main className="max-w-6xl mx-auto p-6 md:p-8">
+            {activeTab === 'summary' && <SummaryView t={t} />}
+            {activeTab === 'swot' && <SwotView t={t} />}
+            {activeTab === 'competency' && <CompetencyView t={t} />}
+            {activeTab === 'strategy' && <StrategyView t={t} />}
+            {activeTab === 'references' && <ReferencesView t={t} />}
+          </main>
+        </div>
+      );
+    }
+
+    // 將 React App 渲染到 HTML 的 root 元素中
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
